@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongodb';
-import Video from '@/models/Video';
+import mongoose from 'mongoose';
+
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://anwar:malekaanwar8088331188@cluster0.urmugpa.mongodb.net/youtube-videos?retryWrites=true&w=majority&appName=Cluster0';
+
+const VideoSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  url: { type: String, required: true },
+  videoId: { type: String, required: true },
+  thumbnail: { type: String, required: true }
+}, { timestamps: true });
+
+const Video = mongoose.models.Video || mongoose.model('Video', VideoSchema);
+
+async function dbConnect() {
+  if (mongoose.connections[0].readyState) return;
+  await mongoose.connect(MONGODB_URI);
+}
 
 export async function PUT(
   request: NextRequest,
