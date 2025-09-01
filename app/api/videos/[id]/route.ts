@@ -23,10 +23,10 @@ async function dbConnect() {
   await mongoose.connect(MONGODB_URI);
 }
 
-export async function PUT(request: NextRequest, context: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: any) {
   try {
     await dbConnect();
-    const { id } = context.params; // ✅ no await here
+    const { id } = context.params; // ✅ keep it simple
     const videoData = await request.json();
 
     const video = await Video.findByIdAndUpdate(id, videoData, { new: true });
@@ -38,10 +38,7 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      data: video,
-    });
+    return NextResponse.json({ success: true, data: video });
   } catch (error) {
     console.error("Error updating video:", error);
     return NextResponse.json(
@@ -51,10 +48,10 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
   }
 }
 
-export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: any) {
   try {
     await dbConnect();
-    const { id } = context.params; // ✅ no await here
+    const { id } = context.params;
 
     const video = await Video.findByIdAndDelete(id);
 
