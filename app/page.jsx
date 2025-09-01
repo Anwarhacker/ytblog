@@ -16,32 +16,12 @@ import {
   Play,
 } from "lucide-react";
 
-// Types
-interface Video {
-  _id: string;
-  title: string;
-  description: string;
-  url: string;
-  videoId: string;
-  thumbnail: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface User {
-  isAdmin: boolean;
-}
-
-interface YouTubeBlogProps {
-  className?: string;
-}
-
 // Utility functions
-const sanitizeInput = (input: string): string => {
+const sanitizeInput = (input) => {
   return DOMPurify.sanitize(input.trim());
 };
 
-const extractVideoId = (url: string): string => {
+const extractVideoId = (url) => {
   const sanitizedUrl = sanitizeInput(url);
   const regex =
     /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
@@ -49,11 +29,11 @@ const extractVideoId = (url: string): string => {
   return match ? match[1] : "";
 };
 
-const generateThumbnail = (videoId: string): string => {
+const generateThumbnail = (videoId) => {
   return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 };
 
-const formatDate = (dateString: string): string => {
+const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
@@ -62,7 +42,7 @@ const formatDate = (dateString: string): string => {
 };
 
 // API functions
-const fetchVideos = async (): Promise<Video[]> => {
+const fetchVideos = async () => {
   try {
     const response = await fetch("/api/videos");
     const data = await response.json();
@@ -73,9 +53,7 @@ const fetchVideos = async (): Promise<Video[]> => {
   }
 };
 
-const createVideo = async (
-  videoData: Omit<Video, "_id" | "createdAt" | "updatedAt">
-): Promise<Video | null> => {
+const createVideo = async (videoData) => {
   try {
     const response = await fetch("/api/videos", {
       method: "POST",
@@ -90,10 +68,7 @@ const createVideo = async (
   }
 };
 
-const updateVideo = async (
-  id: string,
-  videoData: Partial<Video>
-): Promise<Video | null> => {
+const updateVideo = async (id, videoData) => {
   try {
     const response = await fetch(`/api/videos/${id}`, {
       method: "PUT",
@@ -108,7 +83,7 @@ const updateVideo = async (
   }
 };
 
-const deleteVideo = async (id: string): Promise<boolean> => {
+const deleteVideo = async (id) => {
   try {
     const response = await fetch(`/api/videos/${id}`, {
       method: "DELETE",
@@ -122,13 +97,7 @@ const deleteVideo = async (id: string): Promise<boolean> => {
 };
 
 // Video Card Component
-const VideoCard: React.FC<{
-  video: Video;
-  onEdit?: (video: Video) => void;
-  onDelete?: (id: string) => void;
-  onView?: (video: Video) => void;
-  isAdmin?: boolean;
-}> = ({ video, onEdit, onDelete, onView, isAdmin = false }) => {
+const VideoCard = ({ video, onEdit, onDelete, onView, isAdmin = false }) => {
   return (
     <div className="group bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-md transition-all duration-200">
       <div className="relative aspect-video bg-slate-100 dark:bg-slate-700">
@@ -188,11 +157,7 @@ const VideoCard: React.FC<{
 };
 
 // Video Modal Component
-const VideoModal: React.FC<{
-  video: Video | null;
-  isOpen: boolean;
-  onClose: () => void;
-}> = ({ video, isOpen, onClose }) => {
+const VideoModal = ({ video, isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -247,12 +212,7 @@ const VideoModal: React.FC<{
 };
 
 // Admin Form Component
-const AdminForm: React.FC<{
-  video?: Video;
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (video: Omit<Video, "id" | "createdAt" | "updatedAt">) => void;
-}> = ({ video, isOpen, onClose, onSave }) => {
+const AdminForm = ({ video, isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -277,7 +237,7 @@ const AdminForm: React.FC<{
 
   const [formError, setFormError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setFormError("");
 
@@ -400,15 +360,10 @@ const AdminForm: React.FC<{
 };
 
 // Login Form Component
-const LoginForm: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onLogin: (password: string) => void;
-  loginError?: string;
-}> = ({ isOpen, onClose, onLogin, loginError = "" }) => {
+const LoginForm = ({ isOpen, onClose, onLogin, loginError = "" }) => {
   const [password, setPassword] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     onLogin(sanitizeInput(password));
     setPassword("");
@@ -468,17 +423,17 @@ const LoginForm: React.FC<{
 };
 
 // Main Component
-const YouTubeBlog: React.FC<YouTubeBlogProps> = ({ className = "" }) => {
-  const [videos, setVideos] = useState<Video[]>([]);
+const YouTubeBlog = ({ className = "" }) => {
+  const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [viewMode, setViewMode] = useState("grid");
+  const [selectedVideo, setSelectedVideo] = useState(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isAdminFormOpen, setIsAdminFormOpen] = useState(false);
-  const [editingVideo, setEditingVideo] = useState<Video | undefined>();
+  const [editingVideo, setEditingVideo] = useState();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [user, setUser] = useState<User>({ isAdmin: false });
+  const [user, setUser] = useState({ isAdmin: false });
   const [isDark, setIsDark] = useState(false);
 
   // Filter videos based on search query (memoized for performance)
@@ -531,17 +486,17 @@ const YouTubeBlog: React.FC<YouTubeBlogProps> = ({ className = "" }) => {
     setLoading(false);
   };
 
-  const handleVideoView = (video: Video) => {
+  const handleVideoView = (video) => {
     setSelectedVideo(video);
     setIsVideoModalOpen(true);
   };
 
-  const handleVideoEdit = (video: Video) => {
+  const handleVideoEdit = (video) => {
     setEditingVideo(video);
     setIsAdminFormOpen(true);
   };
 
-  const handleVideoDelete = async (id: string) => {
+  const handleVideoDelete = async (id) => {
     if (confirm("Are you sure you want to delete this video?")) {
       const success = await deleteVideo(id);
       if (success) {
@@ -550,9 +505,7 @@ const YouTubeBlog: React.FC<YouTubeBlogProps> = ({ className = "" }) => {
     }
   };
 
-  const handleVideoSave = async (
-    videoData: Omit<Video, "_id" | "createdAt" | "updatedAt">
-  ) => {
+  const handleVideoSave = async (videoData) => {
     if (editingVideo) {
       // Update existing video
       const updatedVideo = await updateVideo(editingVideo._id, videoData);
@@ -574,7 +527,7 @@ const YouTubeBlog: React.FC<YouTubeBlogProps> = ({ className = "" }) => {
 
   const [loginError, setLoginError] = useState("");
 
-  const handleLogin = async (password: string) => {
+  const handleLogin = async (password) => {
     try {
       // In production, this should be a secure API call
       const response = await fetch("/api/auth/login", {
