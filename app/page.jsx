@@ -423,7 +423,8 @@ const LoginForm = ({ isOpen, onClose, onLogin, loginError = "" }) => {
 };
 
 // Main Component
-const YouTubeBlog = ({ className = "" }) => {
+const YouTubeBlog = () => {
+  const className = "";
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
