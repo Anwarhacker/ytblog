@@ -1,103 +1,777 @@
-import Image from "next/image";
+"use client";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import DOMPurify from "isomorphic-dompurify";
+import {
+  Search,
+  Grid,
+  List,
+  Plus,
+  Trash2,
+  Edit,
+  MoreHorizontal,
+  Star,
+  X,
+  Bell,
+  Sun,
+  Moon,
+  Home,
+  BarChart3,
+  Calendar,
+  Settings,
+  MessageCircle,
+  Play,
+  Pause,
+  CheckCircle,
+  Clock,
+} from "lucide-react";
 
-export default function Home() {
+// Types
+interface Video {
+  _id: string;
+  title: string;
+  description: string;
+  url: string;
+  videoId: string;
+  thumbnail: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface User {
+  isAdmin: boolean;
+}
+
+interface YouTubeBlogProps {
+  className?: string;
+}
+
+// Utility functions
+const sanitizeInput = (input: string): string => {
+  return DOMPurify.sanitize(input.trim());
+};
+
+const extractVideoId = (url: string): string => {
+  const sanitizedUrl = sanitizeInput(url);
+  const regex =
+    /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+  const match = sanitizedUrl.match(regex);
+  return match ? match[1] : "";
+};
+
+const generateThumbnail = (videoId: string): string => {
+  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+};
+
+const formatDate = (dateString: string): string => {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
+// API functions
+const fetchVideos = async (): Promise<Video[]> => {
+  try {
+    const response = await fetch("/api/videos");
+    const data = await response.json();
+    return data.success ? data.data : [];
+  } catch (error) {
+    console.error("Error fetching videos:", error);
+    return [];
+  }
+};
+
+const createVideo = async (
+  videoData: Omit<Video, "_id" | "createdAt" | "updatedAt">
+): Promise<Video | null> => {
+  try {
+    const response = await fetch("/api/videos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(videoData),
+    });
+    const data = await response.json();
+    return data.success ? data.data : null;
+  } catch (error) {
+    console.error("Error creating video:", error);
+    return null;
+  }
+};
+
+const updateVideo = async (
+  id: string,
+  videoData: Partial<Video>
+): Promise<Video | null> => {
+  try {
+    const response = await fetch(`/api/videos/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(videoData),
+    });
+    const data = await response.json();
+    return data.success ? data.data : null;
+  } catch (error) {
+    console.error("Error updating video:", error);
+    return null;
+  }
+};
+
+const deleteVideo = async (id: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`/api/videos/${id}`, {
+      method: "DELETE",
+    });
+    const data = await response.json();
+    return data.success;
+  } catch (error) {
+    console.error("Error deleting video:", error);
+    return false;
+  }
+};
+
+// Video Card Component
+const VideoCard: React.FC<{
+  video: Video;
+  onEdit?: (video: Video) => void;
+  onDelete?: (id: string) => void;
+  onView?: (video: Video) => void;
+  isAdmin?: boolean;
+}> = ({ video, onEdit, onDelete, onView, isAdmin = false }) => {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+    <div className="group bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-md transition-all duration-200">
+      <div className="relative aspect-video bg-slate-100 dark:bg-slate-700">
+        <img
+          src={video.thumbnail}
+          alt={video.title}
+          className="w-full h-full object-cover"
+          loading="lazy"
         />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <button
+          onClick={() => onView?.(video)}
+          className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        >
+          <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center">
+            <Play className="w-6 h-6 text-white ml-1" fill="currentColor" />
+          </div>
+        </button>
+        {isAdmin && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className="flex gap-1">
+              <button
+                onClick={() => onEdit?.(video)}
+                className="p-1.5 bg-white/90 dark:bg-slate-800/90 rounded-md hover:bg-white dark:hover:bg-slate-800 transition-colors"
+              >
+                <Edit className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+              </button>
+              <button
+                onClick={() => onDelete?.(video._id)}
+                className="p-1.5 bg-white/90 dark:bg-slate-800/90 rounded-md hover:bg-white dark:hover:bg-slate-800 transition-colors"
+              >
+                <Trash2 className="w-4 h-4 text-red-500" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="p-4">
+        <h3 className="font-semibold text-slate-900 dark:text-slate-100 line-clamp-2 mb-2">
+          {sanitizeInput(video.title)}
+        </h3>
+        <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-3 mb-3">
+          {sanitizeInput(video.description)}
+        </p>
+        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-500">
+          <span>{formatDate(video.createdAt)}</span>
+          <button
+            onClick={() => onView?.(video)}
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            Watch Video
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
-}
+};
+
+// Video Modal Component
+const VideoModal: React.FC<{
+  video: Video | null;
+  isOpen: boolean;
+  onClose: () => void;
+}> = ({ video, isOpen, onClose }) => {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !video) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-xl shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">
+            {sanitizeInput(video.title)}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+          </button>
+        </div>
+        <div className="aspect-video">
+          <iframe
+            src={`https://www.youtube.com/embed/${video.videoId}?autoplay=1`}
+            title={video.title}
+            className="w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+        <div className="p-6">
+          <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+            {sanitizeInput(video.description)}
+          </p>
+          <div className="mt-4 text-sm text-slate-500 dark:text-slate-500">
+            Published on {formatDate(video.createdAt)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Admin Form Component
+const AdminForm: React.FC<{
+  video?: Video;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (video: Omit<Video, "id" | "createdAt" | "updatedAt">) => void;
+}> = ({ video, isOpen, onClose, onSave }) => {
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    url: "",
+  });
+
+  useEffect(() => {
+    if (video) {
+      setFormData({
+        title: video.title,
+        description: video.description,
+        url: video.url,
+      });
+    } else {
+      setFormData({
+        title: "",
+        description: "",
+        url: "",
+      });
+    }
+  }, [video, isOpen]);
+
+  const [formError, setFormError] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+
+    const sanitizedData = {
+      title: sanitizeInput(formData.title),
+      description: sanitizeInput(formData.description),
+      url: sanitizeInput(formData.url),
+    };
+
+    const videoId = extractVideoId(sanitizedData.url);
+    if (!videoId) {
+      setFormError("Please enter a valid YouTube URL");
+      return;
+    }
+
+    onSave({
+      title: sanitizedData.title,
+      description: sanitizedData.description,
+      url: sanitizedData.url,
+      videoId,
+      thumbnail: generateThumbnail(videoId),
+    });
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-xl shadow-2xl">
+        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            {video ? "Edit Video" : "Add New Video"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Title
+            </label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  title: sanitizeInput(e.target.value),
+                })
+              }
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Description
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  description: sanitizeInput(e.target.value),
+                })
+              }
+              rows={3}
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              YouTube URL
+            </label>
+            <input
+              type="url"
+              value={formData.url}
+              onChange={(e) =>
+                setFormData({ ...formData, url: sanitizeInput(e.target.value) })
+              }
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            />
+          </div>
+          {formError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {formError}
+            </div>
+          )}
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              {video ? "Update" : "Add"} Video
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 py-2 px-4 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors font-medium"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Login Form Component
+const LoginForm: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onLogin: (password: string) => void;
+  loginError?: string;
+}> = ({ isOpen, onClose, onLogin, loginError = "" }) => {
+  const [password, setPassword] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onLogin(sanitizeInput(password));
+    setPassword("");
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-xl shadow-2xl">
+        <div className="p-6">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-6 text-center">
+            Admin Login
+          </h2>
+          {loginError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {loginError}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(sanitizeInput(e.target.value))}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="submit"
+                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 py-2 px-4 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main Component
+const YouTubeBlog: React.FC<YouTubeBlogProps> = ({ className = "" }) => {
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [isAdminFormOpen, setIsAdminFormOpen] = useState(false);
+  const [editingVideo, setEditingVideo] = useState<Video | undefined>();
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [user, setUser] = useState<User>({ isAdmin: false });
+  const [isDark, setIsDark] = useState(false);
+
+  // Filter videos based on search query (memoized for performance)
+  const filteredVideos = useMemo(() => {
+    const sanitizedQuery = sanitizeInput(searchQuery.toLowerCase());
+    return videos.filter(
+      (video) =>
+        video.title.toLowerCase().includes(sanitizedQuery) ||
+        video.description.toLowerCase().includes(sanitizedQuery)
+    );
+  }, [videos, searchQuery]);
+
+  // Load videos and theme
+  useEffect(() => {
+    loadVideos();
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [isDark]);
+
+  const loadVideos = async () => {
+    setLoading(true);
+    const fetchedVideos = await fetchVideos();
+    setVideos(fetchedVideos);
+    setLoading(false);
+  };
+
+  const handleVideoView = (video: Video) => {
+    setSelectedVideo(video);
+    setIsVideoModalOpen(true);
+  };
+
+  const handleVideoEdit = (video: Video) => {
+    setEditingVideo(video);
+    setIsAdminFormOpen(true);
+  };
+
+  const handleVideoDelete = async (id: string) => {
+    if (confirm("Are you sure you want to delete this video?")) {
+      const success = await deleteVideo(id);
+      if (success) {
+        setVideos(videos.filter((v) => v._id !== id));
+      }
+    }
+  };
+
+  const handleVideoSave = async (
+    videoData: Omit<Video, "_id" | "createdAt" | "updatedAt">
+  ) => {
+    if (editingVideo) {
+      // Update existing video
+      const updatedVideo = await updateVideo(editingVideo._id, videoData);
+      if (updatedVideo) {
+        setVideos(
+          videos.map((v) => (v._id === editingVideo._id ? updatedVideo : v))
+        );
+      }
+    } else {
+      // Add new video
+      const newVideo = await createVideo(videoData);
+      if (newVideo) {
+        setVideos([newVideo, ...videos]);
+      }
+    }
+
+    setEditingVideo(undefined);
+  };
+
+  const [loginError, setLoginError] = useState("");
+
+  const handleLogin = async (password: string) => {
+    try {
+      // In production, this should be a secure API call
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: sanitizeInput(password) }),
+      });
+
+      if (response.ok) {
+        setUser({ isAdmin: true });
+        setIsLoginOpen(false);
+        setLoginError("");
+      } else {
+        setLoginError("Invalid credentials. Please try again.");
+      }
+    } catch (error) {
+      setLoginError("Login failed. Please check your connection.");
+    }
+  };
+
+  const handleLogout = () => {
+    setUser({ isAdmin: false });
+  };
+
+  return (
+    <div
+      className={`min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors ${className}`}
+    >
+      {/* Header */}
+      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                YouTube Blog
+              </h1>
+
+              {/* Search Bar */}
+              <div className="hidden md:flex items-center relative">
+                <Search className="absolute left-3 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search videos..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 w-80 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* View Toggle */}
+              <div className="hidden sm:flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === "grid"
+                      ? "bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                  }`}
+                >
+                  <Grid className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === "list"
+                      ? "bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                  }`}
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Theme Toggle */}
+              <button
+                onClick={() => setIsDark(!isDark)}
+                className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+              >
+                {isDark ? (
+                  <Sun className="w-5 h-5" />
+                ) : (
+                  <Moon className="w-5 h-5" />
+                )}
+              </button>
+
+              {/* Admin Controls */}
+              {user.isAdmin ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingVideo(undefined);
+                      setIsAdminFormOpen(true);
+                    }}
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Add Video</span>
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsLoginOpen(true)}
+                  className="px-4 py-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-medium"
+                >
+                  Admin
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Search */}
+          <div className="md:hidden pb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search videos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600 dark:text-slate-400">
+              Loading videos...
+            </p>
+          </div>
+        ) : filteredVideos.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-slate-400 dark:text-slate-500 mb-4">
+              <MessageCircle className="w-16 h-16 mx-auto" />
+            </div>
+            <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">
+              {searchQuery ? "No videos found" : "No videos yet"}
+            </h3>
+            <p className="text-slate-600 dark:text-slate-400">
+              {searchQuery
+                ? "Try adjusting your search terms"
+                : user.isAdmin
+                ? "Add your first video to get started"
+                : "Check back later for new content"}
+            </p>
+          </div>
+        ) : (
+          <div
+            className={
+              viewMode === "grid"
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                : "space-y-4"
+            }
+          >
+            {filteredVideos.map((video) => (
+              <VideoCard
+                key={video._id}
+                video={video}
+                onEdit={user.isAdmin ? handleVideoEdit : undefined}
+                onDelete={user.isAdmin ? handleVideoDelete : undefined}
+                onView={handleVideoView}
+                isAdmin={user.isAdmin}
+              />
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* Modals */}
+      <VideoModal
+        video={selectedVideo}
+        isOpen={isVideoModalOpen}
+        onClose={() => {
+          setIsVideoModalOpen(false);
+          setSelectedVideo(null);
+        }}
+      />
+
+      <AdminForm
+        video={editingVideo}
+        isOpen={isAdminFormOpen}
+        onClose={() => {
+          setIsAdminFormOpen(false);
+          setEditingVideo(undefined);
+        }}
+        onSave={handleVideoSave}
+      />
+
+      <LoginForm
+        isOpen={isLoginOpen}
+        onClose={() => {
+          setIsLoginOpen(false);
+          setLoginError("");
+        }}
+        onLogin={handleLogin}
+        loginError={loginError}
+      />
+    </div>
+  );
+};
+
+export default YouTubeBlog;
