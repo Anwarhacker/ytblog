@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import Image from "next/image";
 import DOMPurify from "isomorphic-dompurify";
 import {
   Search,
@@ -8,21 +9,11 @@ import {
   Plus,
   Trash2,
   Edit,
-  MoreHorizontal,
-  Star,
   X,
-  Bell,
   Sun,
   Moon,
-  Home,
-  BarChart3,
-  Calendar,
-  Settings,
   MessageCircle,
   Play,
-  Pause,
-  CheckCircle,
-  Clock,
 } from "lucide-react";
 
 // Types
@@ -141,11 +132,12 @@ const VideoCard: React.FC<{
   return (
     <div className="group bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-md transition-all duration-200">
       <div className="relative aspect-video bg-slate-100 dark:bg-slate-700">
-        <img
+        <Image
           src={video.thumbnail}
           alt={video.title}
-          className="w-full h-full object-cover"
-          loading="lazy"
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
         <button
           onClick={() => onView?.(video)}
@@ -598,7 +590,7 @@ const YouTubeBlog: React.FC<YouTubeBlogProps> = ({ className = "" }) => {
       } else {
         setLoginError("Invalid credentials. Please try again.");
       }
-    } catch (error) {
+    } catch {
       setLoginError("Login failed. Please check your connection.");
     }
   };
