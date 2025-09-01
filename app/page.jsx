@@ -137,10 +137,10 @@ const VideoCard = ({ video, onEdit, onDelete, onView, isAdmin = false }) => {
       </div>
       <div className="p-4">
         <h3 className="font-semibold text-slate-900 dark:text-slate-100 line-clamp-2 mb-2">
-          {sanitizeInput(video.title)}
+          {video.title}
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-3 mb-3">
-          {sanitizeInput(video.description)}
+          {video.description}
         </p>
         <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-500">
           <span>{formatDate(video.createdAt)}</span>
@@ -180,7 +180,7 @@ const VideoModal = ({ video, isOpen, onClose }) => {
       <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-xl shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">
-            {sanitizeInput(video.title)}
+            {video.title}
           </h2>
           <button
             onClick={onClose}
@@ -200,7 +200,7 @@ const VideoModal = ({ video, isOpen, onClose }) => {
         </div>
         <div className="p-6">
           <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-            {sanitizeInput(video.description)}
+            {video.description}
           </p>
           <div className="mt-4 text-sm text-slate-500 dark:text-slate-500">
             Published on {formatDate(video.createdAt)}
@@ -242,9 +242,9 @@ const AdminForm = ({ video, isOpen, onClose, onSave }) => {
     setFormError("");
 
     const sanitizedData = {
-      title: sanitizeInput(formData.title),
-      description: sanitizeInput(formData.description),
-      url: sanitizeInput(formData.url),
+      title: formData.title,
+      description: formData.description,
+      url: formData.url,
     };
 
     const videoId = extractVideoId(sanitizedData.url);
@@ -294,7 +294,7 @@ const AdminForm = ({ video, isOpen, onClose, onSave }) => {
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  title: sanitizeInput(e.target.value),
+                  title: e.target.value,
                 })
               }
               className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -439,7 +439,7 @@ const YouTubeBlog = () => {
 
   // Filter videos based on search query (memoized for performance)
   const filteredVideos = useMemo(() => {
-    const sanitizedQuery = sanitizeInput(searchQuery.toLowerCase());
+    const sanitizedQuery = searchQuery.toLowerCase();
     return videos.filter(
       (video) =>
         video.title.toLowerCase().includes(sanitizedQuery) ||
