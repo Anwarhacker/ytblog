@@ -1,21 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import mongoose from 'mongoose';
+import dbConnect from '@/lib/mongodb';
+import Video from '@/models/Video';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://anwar:malekaanwar8088331188@cluster0.urmugpa.mongodb.net/youtube-videos?retryWrites=true&w=majority&appName=Cluster0';
-
-const VideoSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  url: { type: String, required: true },
-  videoId: { type: String, required: true },
-  thumbnail: { type: String, required: true }
-}, { timestamps: true });
-
-const Video = mongoose.models.Video || mongoose.model('Video', VideoSchema);
-
-async function dbConnect() {
-  if (mongoose.connections[0].readyState) return;
-  await mongoose.connect(MONGODB_URI);
+export async function GET(
+    request: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        await dbConnect();
+        const video = await Video.findById(params.id);
+        if (!video) {
+            return NextResponse.json(
+                { success: false, message: 'Video not found' },
+                { status: 404 }
+            );
+        }
+        return NextResponse.json({ success: true, data: video });
+    } catch (error) {
+        console.error('Error fetching video:', error);
+        return NextResponse.json(
+            { success: false, message: 'Failed to fetch video' },
+            { status: 500 }
+        );
+    }
 }
 
 export async function PUT(
