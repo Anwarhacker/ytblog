@@ -358,7 +358,7 @@ const AdminForm: React.FC<{
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  description: sanitizeInput(e.target.value),
+                  description: e.target.value,
                 })
               }
               rows={3}
@@ -499,13 +499,36 @@ const YouTubeBlog: React.FC<YouTubeBlogProps> = ({ className = "" }) => {
     );
   }, [videos, searchQuery]);
 
-  // Load videos and theme
+  // Initialize theme on component mount
   useEffect(() => {
-    loadVideos();
-    if (isDark) {
+    // Check for saved theme preference or system preference
+    const savedTheme = localStorage.getItem("theme");
+    const systemPrefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    ).matches;
+
+    if (savedTheme === "dark" || (!savedTheme && systemPrefersDark)) {
+      setIsDark(true);
       document.documentElement.classList.add("dark");
     } else {
+      setIsDark(false);
       document.documentElement.classList.remove("dark");
+    }
+  }, []);
+
+  // Load videos
+  useEffect(() => {
+    loadVideos();
+  }, []);
+
+  // Handle theme changes
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
   }, [isDark]);
 
@@ -584,6 +607,10 @@ const YouTubeBlog: React.FC<YouTubeBlogProps> = ({ className = "" }) => {
     setUser({ isAdmin: false });
   };
 
+  const toggleTheme = () => {
+    setIsDark((prev) => !prev);
+  };
+
   return (
     <div
       className={`min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors ${className}`}
@@ -594,7 +621,7 @@ const YouTubeBlog: React.FC<YouTubeBlogProps> = ({ className = "" }) => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                YouTube Blog
+                Maleka anwar voice
               </h1>
 
               {/* Search Bar */}
@@ -637,8 +664,9 @@ const YouTubeBlog: React.FC<YouTubeBlogProps> = ({ className = "" }) => {
 
               {/* Theme Toggle */}
               <button
-                onClick={() => setIsDark(!isDark)}
+                onClick={toggleTheme}
                 className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+                title={isDark ? "Switch to light mode" : "Switch to dark mode"}
               >
                 {isDark ? (
                   <Sun className="w-5 h-5" />

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '../../../../lib/mongodb';
-import Video from '../../../../models/Video';
+import dbConnect from '@/lib/mongodb';
+import Video from '@/models/Video';
 
 export async function PUT(
   request: NextRequest,
