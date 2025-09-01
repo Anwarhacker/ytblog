@@ -18,19 +18,13 @@ async function dbConnect() {
   await mongoose.connect(MONGODB_URI);
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, context: any) {
   try {
     await dbConnect();
+    const { id } = await context.params;
     const videoData = await request.json();
     
-    const video = await Video.findByIdAndUpdate(
-      params.id,
-      videoData,
-      { new: true }
-    );
+    const video = await Video.findByIdAndUpdate(id, videoData, { new: true });
     
     if (!video) {
       return NextResponse.json(
@@ -52,14 +46,12 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, context: any) {
   try {
     await dbConnect();
+    const { id } = await context.params;
     
-    const video = await Video.findByIdAndDelete(params.id);
+    const video = await Video.findByIdAndDelete(id);
     
     if (!video) {
       return NextResponse.json(
